@@ -33,6 +33,7 @@ SLIDER_MARGIN = SLIDER_HANDLE_RADIUS * 2 + 30
 ORIGIN = (WIDTH * 3 // 4, HEIGHT // 2 - SLIDER_MARGIN)
 L_SCALE = HEIGHT // 6
 PENDULUM_RADIUS = 30
+PRECISION = 10000
 
 G_MIN, G_MAX = 0.0, 100.0
 MU_MIN, MU_MAX = 0.0, 1.0
@@ -208,7 +209,8 @@ while running:
         w = (theta1 - theta) / dt
         theta = theta1
     else:
-        theta, w = damped_pendulum_angle(theta, w, L, MU, G, dt)
+        for i in range(PRECISION):
+            theta, w = damped_pendulum_angle(theta, w, L, MU, G, dt / PRECISION)
     if abs(theta) > math.pi:
         theta = (theta + math.pi) % (2 * math.pi) - math.pi
     if abs(theta - prev_theta) > math.pi:
