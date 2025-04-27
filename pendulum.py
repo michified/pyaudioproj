@@ -206,7 +206,8 @@ while running:
         theta = theta1
     else:
         theta, w = damped_pendulum_angle(theta, w, L, MU, G, dt)
-    theta = theta % (2 * math.pi)
+    if abs(theta) > math.pi:
+        theta = (theta + math.pi) % (2 * math.pi) - math.pi
     
     screen.fill(WHITE)
     px, py = get_pendulum_pos(theta, L)
