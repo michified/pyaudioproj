@@ -40,6 +40,7 @@ MU_MIN, MU_MAX = 0.0, 1.0
 G = 9.81
 MU = 0.01
 L = 1.0
+SIGN = 1
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -195,7 +196,9 @@ while running:
             records.clear()
             dragging = False
             slider_drag = None
+            SIGN = 1
 
+    prev_theta = theta
     if dragging:
         mx, my = pg.mouse.get_pos()
         dx = mx - ORIGIN[0]
@@ -208,6 +211,8 @@ while running:
         theta, w = damped_pendulum_angle(theta, w, L, MU, G, dt)
     if abs(theta) > math.pi:
         theta = (theta + math.pi) % (2 * math.pi) - math.pi
+    if abs(theta - prev_theta) > math.pi:
+        SIGN = -SIGN
     
     screen.fill(WHITE)
     px, py = get_pendulum_pos(theta, L)
@@ -223,7 +228,7 @@ while running:
     draw_slider(mux, muy, MU, MU_MIN, MU_MAX, "damping")
     text = font.render(f"{"length"}: {L:.3f}", True, BLACK)
     screen.blit(text, (WIDTH - 150, 50))
-    records.push_front(theta * L_SCALE * 0.7 + HEIGHT // 2)
+    records.push_front(theta * L_SCALE * 0.7 * SIGN + HEIGHT // 2)
     
     draw_graph()
 
