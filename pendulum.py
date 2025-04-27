@@ -134,13 +134,19 @@ def draw_graph():
     pg.draw.line(screen, BLACK, (0, HEIGHT // 2), (len(records) * SCROLL_STEP, HEIGHT // 2), 2)
     
     # y-axis (theta)
-    pg.draw.line(screen, BLACK, (50, HEIGHT // 2 + math.pi * L_SCALE * 0.7), (50, HEIGHT // 2 - math.pi * L_SCALE * 0.7), 2)
+    pg.draw.line(screen, BLACK, (50, HEIGHT // 2 + math.pi * L_SCALE * 0.7 + 20), (50, HEIGHT // 2 - math.pi * L_SCALE * 0.7 - 20), 2)
     
     # label
     text = font.render("θ (rad)", True, BLACK)
     screen.blit(text, (70, HEIGHT // 2 - math.pi * L_SCALE * 0.7))
     text = font.render("t (s)", True, BLACK)
     screen.blit(text, (len(records) * SCROLL_STEP - 50, HEIGHT // 2 + 15))
+    text = font.render("π", True, BLACK)
+    screen.blit(text, (27, HEIGHT // 2 - math.pi * L_SCALE * 0.7 - 10))
+    text = font.render("-π", True, BLACK)
+    screen.blit(text, (20, HEIGHT // 2 + math.pi * L_SCALE * 0.7 - 10))
+    pg.draw.line(screen, BLACK, (45, HEIGHT // 2 - math.pi * L_SCALE * 0.7), (55, HEIGHT // 2 - math.pi * L_SCALE * 0.7), 2)
+    pg.draw.line(screen, BLACK, (45, HEIGHT // 2 + math.pi * L_SCALE * 0.7), (55, HEIGHT // 2 + math.pi * L_SCALE * 0.7), 2)
     
 def slider_value_from_pos(mouse_x, x, min_val, max_val):
     norm = min(max((mouse_x - x) / SLIDER_WIDTH, 0), 1)
@@ -200,7 +206,8 @@ while running:
         theta = theta1
     else:
         theta, w = damped_pendulum_angle(theta, w, L, MU, G, dt)
-
+    theta = theta % (2 * math.pi)
+    
     screen.fill(WHITE)
     px, py = get_pendulum_pos(theta, L)
     pg.draw.line(screen, BLACK, ORIGIN, (px, py), 3)
