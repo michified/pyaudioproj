@@ -107,6 +107,7 @@ class doublyLinkedList:
             
 SCROLL_STEP = 2
 records = doublyLinkedList(WIDTH // (2 * SCROLL_STEP))
+records_small_pendulum = doublyLinkedList(WIDTH)
 
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -153,7 +154,6 @@ def draw_graph():
             pg.draw.line(screen, GREY, ((len(records) - i) * SCROLL_STEP, y), ((len(records) - i - 1) * SCROLL_STEP, next_y), 2)
         cur = cur.next
         i += 1
-    
     # x-axis (t)
     pg.draw.line(screen, BLACK, (0, HEIGHT // 2), (len(records) * SCROLL_STEP, HEIGHT // 2), 2)
     
@@ -167,6 +167,18 @@ def draw_graph():
     display_text("-π", (20, HEIGHT // 2 + math.pi * L_SCALE * 0.7 - 10))
     pg.draw.line(screen, BLACK, (45, HEIGHT // 2 - math.pi * L_SCALE * 0.7), (55, HEIGHT // 2 - math.pi * L_SCALE * 0.7), 2)
     pg.draw.line(screen, BLACK, (45, HEIGHT // 2 + math.pi * L_SCALE * 0.7), (55, HEIGHT // 2 + math.pi * L_SCALE * 0.7), 2)
+    
+def draw_path():
+    cur = records_small_pendulum.head
+    i = 0
+    while cur is not None:
+        x, y = int(cur.data[0]), int(cur.data[1])
+        if cur.next is not None:
+            next_x, next_y = int(cur.next.data[0]), int(cur.next.data[1])
+            add = (255 - GREY[0]) * i / len(records_small_pendulum) - 1
+            pg.draw.line(screen, (GREY[0] + add, GREY[1] + add, GREY[2] + add), (x, y), (next_x, next_y), 2)
+        cur = cur.next
+        i += 1
 
 def slider_value_from_pos(mouse_x, x, min_val, max_val):
     norm = min(max((mouse_x - x) / SLIDER_WIDTH, 0), 1)
@@ -276,6 +288,7 @@ while running:
             G = 9.81
             MU = 0.01
             records.clear()
+            records_small_pendulum.clear()
             dragging = False
             slider_drag = None
             SIGN = 1
@@ -313,7 +326,9 @@ while running:
         SIGN = -SIGN
 
     screen.fill(WHITE)
-
+    
+    draw_path()
+    draw_graph()
     draw_double_pendulum(theta1, theta2 - theta1, l1, l2, m1, m2)
 
     gx, gy = WIDTH // 2 - SLIDER_WIDTH // 2, HEIGHT - SLIDER_MARGIN * 2
@@ -329,8 +344,7 @@ while running:
     display_text(f"mass1: {m1:.2f}", (WIDTH - 200, 110))
     display_text(f"mass2: {m2:.2f}", (WIDTH - 200, 140))
     records.push_front(theta1 * L_SCALE * 0.7 * SIGN + HEIGHT // 2)
-    
-    draw_graph()
+    records_small_pendulum.push_front(get_double_pendulum_positions(theta1, theta2 - theta1, l1, l2)[1])
     pg.display.flip()
 
 pg.quit()
