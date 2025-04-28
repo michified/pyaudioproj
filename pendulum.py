@@ -220,6 +220,19 @@ def draw_double_pendulum(theta1, theta2, l1, l2, m1, m2):
     gfxdraw.filled_circle(screen, ORIGIN[0], ORIGIN[1], 5, BLACK)
 
 running = True
+draw_path_enabled = True  # Add a variable to track the checkbox state
+
+def draw_checkbox(x, y, label, checked):
+    box_size = 20
+    # Draw the checkbox border
+    pg.draw.rect(screen, BLACK, (x, y, box_size, box_size), 2)
+    # Draw the check mark if checked
+    if checked:
+        pg.draw.line(screen, BLACK, (x + 4, y + box_size // 2), (x + box_size // 2, y + box_size - 4), 3)
+        pg.draw.line(screen, BLACK, (x + box_size // 2, y + box_size - 4), (x + box_size - 4, y + 4), 3)
+    # Draw the label next to the checkbox
+    display_text(label, (x + box_size + 10, y))
+
 while running:
     dt = clock.tick(60) / 1000
     drag = 0 # 0 for not dragging, 1 for dragging first pendulum, 2 for dragging second pendulum
@@ -255,6 +268,10 @@ while running:
                 slider_drag = "mass1"
             elif (mx - mass2_handle_x) ** 2 + (my - mass2_handle_y) ** 2 < SLIDER_HANDLE_RADIUS ** 2:
                 slider_drag = "mass2"
+            # Add checkbox to toggle the drawing of the path
+            checkbox_x, checkbox_y, checkbox_size = WIDTH - 200, HEIGHT - 200, 20
+            if checkbox_x <= mx <= checkbox_x + checkbox_size and checkbox_y <= my <= checkbox_y + checkbox_size:
+                draw_path_enabled = not draw_path_enabled
         elif event.type == pg.MOUSEBUTTONUP:
             dragging = False
             slider_drag = None
@@ -327,7 +344,13 @@ while running:
 
     screen.fill(WHITE)
     
-    draw_path()
+    # Draw the checkbox
+    checkbox_x, checkbox_y = WIDTH - 200, HEIGHT - 200
+    draw_checkbox(checkbox_x, checkbox_y, "Draw Path", draw_path_enabled)
+
+    # Conditionally draw the path
+    if draw_path_enabled:
+        draw_path()
     draw_graph()
     draw_double_pendulum(theta1, theta2 - theta1, l1, l2, m1, m2)
 
