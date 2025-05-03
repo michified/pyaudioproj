@@ -10,6 +10,7 @@ WHITE = (255, 255, 255)
 anim_move = None
 anim_speed = math.pi / 30
 solution_moves = []
+solution_display = ""
 
 cube_vertices = np.array([
     [-1.5, -1.5, -1.5],
@@ -84,7 +85,6 @@ def rotate_face_clockwise(face):
     tmp01 = cube_colors[face][0, 1]
     tmp02 = cube_colors[face][0, 2]
     tmp10 = cube_colors[face][1, 0]
-    tmp11 = cube_colors[face][1, 1]
     tmp12 = cube_colors[face][1, 2]
     tmp20 = cube_colors[face][2, 0]
     tmp21 = cube_colors[face][2, 1]
@@ -101,7 +101,7 @@ def rotate_face_clockwise(face):
     cube_colors[face][1, 0] = tmp21
     
 def rotate_face_counterclockwise(face):
-    for i in range(3):
+    for _ in range(3):
         rotate_face_clockwise(face)
 
 def rotate_slice_clockwise(slice): # green is facing you
@@ -219,6 +219,7 @@ def get_visible_faces(rotated_verts):
 def get_sticker_polygons(face_idx, rotated_verts, width, height, fov, viewer_distance, transform_func=None):
     face = cube_faces[face_idx]
     v = [rotated_verts[j] for j in face]
+    
     match face_idx:
         case 0:  # U
             v00, v01, v11, v10 = v[0], v[1], v[2], v[3]
@@ -232,6 +233,7 @@ def get_sticker_polygons(face_idx, rotated_verts, width, height, fov, viewer_dis
             v00, v01, v11, v10 = v[1], v[2], v[3], v[0]
         case 5:  # R
             v00, v01, v11, v10 = v[1], v[0], v[3], v[2]
+            
     polys = []
     for row in range(3):
         for col in range(3):
@@ -242,12 +244,7 @@ def get_sticker_polygons(face_idx, rotated_verts, width, height, fov, viewer_dis
                 if transform_func:
                     p = transform_func(p)
                 return p
-            corners3d = [
-                interp(row, col),
-                interp(row, col + 1),
-                interp(row + 1, col + 1),
-                interp(row + 1, col)
-            ]
+            corners3d = [interp(row, col), interp(row, col + 1), interp(row + 1, col + 1), interp(row + 1, col)]
             corners2d = [project(c, width, height, fov, viewer_distance) for c in corners3d]
             
             # tuple: sticker grid location, projected corners, original 3D corners
@@ -259,7 +256,6 @@ def draw_cube(screen, z_centers, rotated_verts, width, height, fov, viewer_dista
     faces_pairs.sort(key=lambda x: x[2], reverse=True)
     
     if (anim_move is not None) and (anim_move['turn'] in {'F','U','D','L','R','B'}):
-        turn_move = anim_move['turn']
         turning_face_idx = anim_move['face']
         turning_face_verts = [rotated_verts[j] for j in cube_faces[turning_face_idx]]
         turning_axis = get_face_normal(turning_face_verts)
@@ -276,7 +272,7 @@ def draw_cube(screen, z_centers, rotated_verts, width, height, fov, viewer_dista
         
     # sticker polygons
     polygons_to_draw = []
-    for face, color, _, face_idx in faces_pairs:
+    for _, _, _, face_idx in faces_pairs:
         sticker_polys = get_sticker_polygons(face_idx, rotated_verts, width, height, fov, viewer_distance)
         for (row, col), poly, corners3d in sticker_polys:
             if anim_move is not None:
@@ -389,13 +385,24 @@ def get_cube_definition():
 
     return s
 
+# Add a slider for move turn speed
+slider_rect = pg.Rect(20, 20, 200, 20)
+slider_knob_rect = pg.Rect(20, 15, 10, 30)
+slider_dragging = False
+
+def draw_slider(screen, slider_rect, knob_rect):
+    pg.draw.rect(screen, (200, 200, 200), slider_rect)
+    pg.draw.rect(screen, BLACK, slider_rect, 2)
+    pg.draw.rect(screen, (100, 100, 100), knob_rect)
+    pg.draw.rect(screen, BLACK, knob_rect, 2)
+
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 clock = pg.time.Clock()
 solve_button_rect = pg.Rect(WIDTH - 150, 20, 130, 40)
 font = pg.font.SysFont(None, 30)
 
-orientation = np.identity(3)
+orientation = rotate_matrix_x(math.pi / 2) 
 running = True
 mouse_down = False
 last_mouse_pos = None
@@ -414,96 +421,64 @@ while running:
 
                     # parse solution 
                     solution_moves = solution.strip().split()
+                    solution_display = ""
+                elif slider_knob_rect.collidepoint(event.pos):
+                    slider_dragging = True
                 else:
                     mouse_down = True
                     last_mouse_pos = pg.mouse.get_pos()
         elif event.type == pg.MOUSEBUTTONUP:
             if event.button == 1:
                 mouse_down = False
-        elif event.type == pg.MOUSEMOTION and mouse_down:
-            x, y = pg.mouse.get_pos()
-            last_x, last_y = last_mouse_pos
-            dx = x - last_x
-            dy = y - last_y
+                slider_dragging = False
+        elif event.type == pg.MOUSEMOTION:
+            if mouse_down:
+                x, y = pg.mouse.get_pos()
+                last_x, last_y = last_mouse_pos
+                dx = x - last_x
+                dy = y - last_y
 
-            rot_y = rotate_matrix_y(-dx * 0.01)
-            rot_x = rotate_matrix_x(-dy * 0.01)
+                rot_y = rotate_matrix_y(-dx * 0.01)
+                rot_x = rotate_matrix_x(-dy * 0.01)
 
-            orientation = rot_x @ rot_y @ orientation
-            last_mouse_pos = (x, y)
+                orientation = rot_x @ rot_y @ orientation
+                last_mouse_pos = (x, y)
+            elif slider_dragging:
+                x, _ = pg.mouse.get_pos()
+                slider_knob_rect.x = max(slider_rect.x, min(x, slider_rect.x + slider_rect.width - slider_knob_rect.width))
+                anim_speed = math.pi / 60 + (math.pi / 30) * ((slider_knob_rect.x - slider_rect.x) / (slider_rect.width - slider_knob_rect.width))
         elif event.type == pg.KEYDOWN and anim_move is None:
             prime = pg.key.get_pressed()[pg.K_LSHIFT] or pg.key.get_pressed()[pg.K_RSHIFT]
-            match event.key:
-                case pg.K_u:
-                    if anim_move is None:
-                        anim_move = {
-                            'face': 0,
-                            'turn': 'U',
-                            'prime': prime,
-                            'current_angle': 0,
-                            'target_angle': math.pi/2,
-                            'speed': anim_speed
-                        }
-                case pg.K_d:
-                    if anim_move is None:
-                        anim_move = {
-                            'face': 1,
-                            'turn': 'D',
-                            'prime': prime,
-                            'current_angle': 0,
-                            'target_angle': math.pi/2,
-                            'speed': anim_speed
-                        }
-                case pg.K_f:
-                    if anim_move is None:
-                        anim_move = {
-                            'face': 2,
-                            'turn': 'F',
-                            'prime': prime,
-                            'current_angle': 0,
-                            'target_angle': math.pi/2,
-                            'speed': anim_speed
-                        }
-                case pg.K_b:
-                    if anim_move is None:
-                        anim_move = {
-                            'face': 3,
-                            'turn': 'B',
-                            'prime': prime,
-                            'current_angle': 0,
-                            'target_angle': math.pi/2,
-                            'speed': anim_speed
-                        }
-                case pg.K_l:
-                    if anim_move is None:
-                        anim_move = {
-                            'face': 4,
-                            'turn': 'L',
-                            'prime': prime,
-                            'current_angle': 0,
-                            'target_angle': math.pi/2,
-                            'speed': anim_speed
-                        }
-                case pg.K_r:
-                    if anim_move is None:
-                        anim_move = {
-                            'face': 5,
-                            'turn': 'R',
-                            'prime': prime,
-                            'current_angle': 0,
-                            'target_angle': math.pi/2,
-                            'speed': anim_speed
-                        }
-                case pg.K_SPACE:
-                    cube_colors = np.zeros((6, 3, 3), dtype=int)
-                    for i in range(6):
-                        cube_colors[i, :, :] = i
+            key_to_turn = {pg.K_u: 'U', pg.K_d: 'D', pg.K_f: 'F', pg.K_b: 'B', pg.K_l: 'L', pg.K_r: 'R'}
+            if event.key in key_to_turn:
+                turn = key_to_turn[event.key]
+                anim_move = {
+                    'face': move_to_face[turn],
+                    'turn': turn,
+                    'prime': prime,
+                    'current_angle': 0,
+                    'target_angle': math.pi / 2,
+                    'speed': anim_speed
+                }
+            elif event.key == pg.K_SPACE:
+                cube_colors = np.zeros((6, 3, 3), dtype=int)
+                for i in range(6):
+                    cube_colors[i, :, :] = i
 
     if (anim_move is None) and solution_moves:
         move = solution_moves.pop(0)
+        if move[0] == '(':
+            continue
         letter = move[0]
         prime = move[1] == '3'
         double = move[1] == '2'
+        cur_moves = solution_display.split()
+        if len(cur_moves) > 0 and cur_moves[-1][0] == letter:
+            cur_moves.pop()
+            cur_moves.append(letter + '2')
+        else:
+            cur_moves.append(letter + ("'" if prime else ""))
+        solution_display = " ".join(cur_moves)
         if letter in move_to_face:
             anim_move = {
                 'face': move_to_face[letter],
@@ -546,6 +521,12 @@ while running:
     button_text = font.render("Solve Cube", True, BLACK)
     text_rect = button_text.get_rect(center = solve_button_rect.center)
     screen.blit(button_text, text_rect)
+    
+    if solution_display:
+        solution_text = font.render("Solution: " + solution_display, True, BLACK)
+        screen.blit(solution_text, (20, HEIGHT - 40))
+    
+    draw_slider(screen, slider_rect, slider_knob_rect)
     
     pg.display.flip()
     clock.tick(60)
