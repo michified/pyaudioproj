@@ -3,14 +3,15 @@ import math
 import numpy as np
 import twophase.solver as sv
 
-WIDTH, HEIGHT = 1000, 1000
+WIDTH, HEIGHT = 900, 900
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
 anim_move = None
-anim_speed = math.pi / 30
+anim_speed = 0.05
 solution_moves = []
 solution_display = ""
+green = False
 
 cube_vertices = np.array([
     [-1.5, -1.5, -1.5],
@@ -197,6 +198,10 @@ def rotate_matrix_x(angle):
 def rotate_matrix_y(angle):
     c, s = math.cos(angle), math.sin(angle)
     return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+def rotate_matrix_z(angle):
+    c, s = math.cos(angle), math.sin(angle)
+    return np.array([[c, -s, 0], [s, c, 0], [0,  0, 1]])
 
 def get_face_normal(face_verts):
     # normal vector of the face defined by three vertices
@@ -422,6 +427,7 @@ while running:
                     # parse solution 
                     solution_moves = solution.strip().split()
                     solution_display = ""
+                    green = False
                 elif slider_knob_rect.collidepoint(event.pos):
                     slider_dragging = True
                 else:
@@ -440,8 +446,18 @@ while running:
 
                 rot_y = rotate_matrix_y(-dx * 0.01)
                 rot_x = rotate_matrix_x(-dy * 0.01)
-
                 orientation = rot_x @ rot_y @ orientation
+
+                center_x, center_y = WIDTH / 2, HEIGHT / 2
+                angle_prev = math.atan2(last_mouse_pos[1] - center_y, last_mouse_pos[0] - center_x)
+                angle_curr = math.atan2(y - center_y, x - center_x)
+                d_angle = angle_curr - angle_prev
+
+                if abs(d_angle) > 0.2:
+                    d_angle = 0.2 if d_angle > 0 else -0.2
+                rot_z = rotate_matrix_z(d_angle * 0.25)
+                orientation = orientation @ rot_z
+
                 last_mouse_pos = (x, y)
             elif slider_dragging:
                 x, _ = pg.mouse.get_pos()
@@ -452,22 +468,27 @@ while running:
             key_to_turn = {pg.K_u: 'U', pg.K_d: 'D', pg.K_f: 'F', pg.K_b: 'B', pg.K_l: 'L', pg.K_r: 'R'}
             if event.key in key_to_turn:
                 turn = key_to_turn[event.key]
+                total_frames = int(anim_move['target_angle'] / anim_speed) if 'target_angle' in locals() else int(math.pi / 2 / anim_speed)
                 anim_move = {
                     'face': move_to_face[turn],
                     'turn': turn,
                     'prime': prime,
                     'current_angle': 0,
                     'target_angle': math.pi / 2,
-                    'speed': anim_speed
+                    'speed': anim_speed,
+                    'current_frame': 0,
+                    'total_frames': total_frames
                 }
             elif event.key == pg.K_SPACE:
                 cube_colors = np.zeros((6, 3, 3), dtype=int)
                 for i in range(6):
                     cube_colors[i, :, :] = i
+                orientation = rotate_matrix_x(math.pi / 2)
 
     if (anim_move is None) and solution_moves:
         move = solution_moves.pop(0)
         if move[0] == '(':
+            green = True
             continue
         letter = move[0]
         prime = move[1] == '3'
@@ -480,16 +501,31 @@ while running:
             cur_moves.append(letter + ("'" if prime else ""))
         solution_display = " ".join(cur_moves)
         if letter in move_to_face:
+            total_frames = int(math.pi / 2 / anim_speed)
             anim_move = {
                 'face': move_to_face[letter],
                 'turn': letter,
                 'prime': prime,
                 'current_angle': 0,
                 'target_angle': math.pi/2,
-                'speed': anim_speed
+                'speed': anim_speed,
+                'current_frame': 0,
+                'total_frames': total_frames
             }
         if double:
             solution_moves.insert(0, letter + '1')
+
+    if anim_move is not None:
+        # ease in-out animation
+        t = anim_move['current_frame'] / anim_move['total_frames']
+        t = min(max(t, 0), 1)
+        angle = anim_move['target_angle'] * (0.5 - 0.5 * math.cos(math.pi * t))
+        anim_move['current_angle'] = angle
+        anim_move['current_frame'] += 1
+        if anim_move['current_frame'] > anim_move['total_frames']:
+            anim_move['current_angle'] = anim_move['target_angle']
+            execute_turn(anim_move['turn'], anim_move['prime'])
+            anim_move = None
 
     screen.fill(WHITE)
     rotated = []
@@ -501,17 +537,6 @@ while running:
         projected = project(r, WIDTH, HEIGHT, fov=2000, viewer_distance=6)
         transformed.append(projected)
     
-    if anim_move is not None:
-        anim_move['current_angle'] += anim_move['speed']
-        
-        # clamp rotation angle
-        if anim_move['current_angle'] >= anim_move['target_angle']:
-            anim_move['current_angle'] = anim_move['target_angle']
-            
-            # update stickers
-            execute_turn(anim_move['turn'], anim_move['prime'])
-            anim_move = None
-
     face_centers = [sum(rotated[idx][2] for idx in face) / 4 for face in cube_faces]
     draw_cube(screen, face_centers, rotated, WIDTH, HEIGHT, fov=800, viewer_distance=6)
     
@@ -523,8 +548,10 @@ while running:
     screen.blit(button_text, text_rect)
     
     if solution_display:
-        solution_text = font.render("Solution: " + solution_display, True, BLACK)
+        solution_text = font.render("Solution: " + solution_display, True, (0, 210, 0) if green else BLACK)
         screen.blit(solution_text, (20, HEIGHT - 40))
+    
+    screen.blit(font.render("Move Speed: " + str(round(anim_speed, 2)), True, BLACK), (20, 50))
     
     draw_slider(screen, slider_rect, slider_knob_rect)
     
