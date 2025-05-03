@@ -386,7 +386,7 @@ def get_cube_definition():
                 row = row[::-1]
             for sticker in row:
                 s += face_letter[sticker]
-    print(s)
+
     return s
 
 pg.init()
@@ -411,7 +411,7 @@ while running:
                 if solve_button_rect.collidepoint(event.pos):
                     cube_str = get_cube_definition()
                     solution = sv.solve(cube_str, timeout=0.3)
-                    print("Solution:", solution)
+
                     # parse solution 
                     solution_moves = solution.strip().split()
                 else:
