@@ -59,7 +59,6 @@ MU_MIN, MU_MAX = 0.0, 1.0
 
 G = 9.81
 MU = 0.01
-SIGN = 1
 
 MASS_MIN, MASS_MAX = 0.000000001, 5.0
 
@@ -114,7 +113,6 @@ screen = pg.display.set_mode((WIDTH, HEIGHT))
 clock = pg.time.Clock()
 font = pg.font.SysFont(None, 28)
 
-dragging = False
 slider_drag = None  # None, "g", or "mu"
 
 def get_pendulum_pos(theta, l):
@@ -235,7 +233,6 @@ def draw_checkbox(x, y, label, checked):
 
 while running:
     dt = clock.tick(60) / 1000
-    drag = 0 # 0 for not dragging, 1 for dragging first pendulum, 2 for dragging second pendulum
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
@@ -273,7 +270,6 @@ while running:
             if checkbox_x <= mx <= checkbox_x + checkbox_size and checkbox_y <= my <= checkbox_y + checkbox_size:
                 draw_path_enabled = not draw_path_enabled
         elif event.type == pg.MOUSEBUTTONUP:
-            dragging = False
             slider_drag = None
             dragging_double = False
             drag_double_idx = None
@@ -306,9 +302,6 @@ while running:
             MU = 0.01
             records.clear()
             records_small_pendulum.clear()
-            dragging = False
-            slider_drag = None
-            SIGN = 1
 
     prev_theta1 = theta1
     
@@ -339,8 +332,6 @@ while running:
         theta1 = (theta1 + math.pi) % (2 * math.pi) - math.pi
     if abs(theta2) > math.pi:
         theta2 = (theta2 + math.pi) % (2 * math.pi) - math.pi
-    if abs(theta1 - prev_theta1) > math.pi:
-        SIGN = -SIGN
 
     screen.fill(WHITE)
     
@@ -366,7 +357,7 @@ while running:
     display_text(f"length2: {l2:.3f}", (WIDTH - 200, 80))
     display_text(f"mass1: {m1:.2f}", (WIDTH - 200, 110))
     display_text(f"mass2: {m2:.2f}", (WIDTH - 200, 140))
-    records.push_front(theta1 * L_SCALE * 0.7 * SIGN + HEIGHT // 2)
+    records.push_front(theta1 * L_SCALE * 0.7 + HEIGHT // 2)
     records_small_pendulum.push_front(get_double_pendulum_positions(theta1, theta2 - theta1, l1, l2)[1])
     pg.display.flip()
 

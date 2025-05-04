@@ -33,12 +33,6 @@ face_colors = np.array([
     (255, 0, 0)      # R - red
 ])
 
-cube_edges = np.array([
-    (0, 1), (1, 2), (2, 3), (3, 0),
-    (4, 5), (5, 6), (6, 7), (7, 4),
-    (0, 4), (1, 5), (2, 6), (3, 7)
-])
-
 cube_faces = np.array([
     (3, 2, 1, 0), # U
     (4, 5, 6, 7), # D
@@ -51,22 +45,6 @@ cube_faces = np.array([
 cube_colors = np.zeros((6, 3, 3), dtype=int)
 for i in range(6):
     cube_colors[i, :, :] = i
-
-def rotateX(point, angle):
-    x, y, z = point
-    cos_theta = math.cos(angle)
-    sin_theta = math.sin(angle)
-    y2 = y * cos_theta - z * sin_theta
-    z2 = y * sin_theta + z * cos_theta
-    return [x, y2, z2]
-
-def rotateY(point, angle):
-    x, y, z = point
-    cos_theta = math.cos(angle)
-    sin_theta = math.sin(angle)
-    z2 = z * cos_theta - x * sin_theta
-    x2 = z * sin_theta + x * cos_theta
-    return [x2, y, z2]
 
 def rodrigues_rotate(v, k, theta):
     v = np.array(v)
@@ -468,7 +446,7 @@ while running:
             key_to_turn = {pg.K_u: 'U', pg.K_d: 'D', pg.K_f: 'F', pg.K_b: 'B', pg.K_l: 'L', pg.K_r: 'R'}
             if event.key in key_to_turn:
                 turn = key_to_turn[event.key]
-                total_frames = int(anim_move['target_angle'] / anim_speed) if 'target_angle' in locals() else int(math.pi / 2 / anim_speed)
+                total_frames = int(math.pi / 2 / anim_speed)
                 anim_move = {
                     'face': move_to_face[turn],
                     'turn': turn,
@@ -529,13 +507,11 @@ while running:
 
     screen.fill(WHITE)
     rotated = []
-    transformed = []
     for v in cube_vertices:
         v_np = np.array(v)
         r = orientation @ v_np
         rotated.append(r.tolist())
         projected = project(r, WIDTH, HEIGHT, fov=2000, viewer_distance=6)
-        transformed.append(projected)
     
     face_centers = [sum(rotated[idx][2] for idx in face) / 4 for face in cube_faces]
     draw_cube(screen, face_centers, rotated, WIDTH, HEIGHT, fov=800, viewer_distance=6)
