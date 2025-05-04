@@ -179,7 +179,7 @@ def rotate_matrix_y(angle):
 
 def rotate_matrix_z(angle):
     c, s = math.cos(angle), math.sin(angle)
-    return np.array([[c, -s, 0], [s, c, 0], [0,  0, 1]])
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
 def get_face_normal(face_verts):
     # normal vector of the face defined by three vertices
